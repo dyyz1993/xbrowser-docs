@@ -18,6 +18,7 @@ title: 插件开发指南
 - [参数校验](#参数校验)
 - [返回值规范](#返回值规范)
 - [页面访问](#页面访问)
+- [loginRequired 声明](#loginrequired-声明)
 - [登录/登出](#登录登出)
 - [存储 API](#存储-api)
 - [实战示例](#实战示例)
@@ -224,12 +225,55 @@ site.command('command-name', {
   description: '命令描述',           // string（必须）
   scope: 'page',                    // CommandScope（必须）
   parameters: z.object({...}),      // Zod schema（可选）
+  loginRequired: 'required',        // 'required' | 'optional' | 'none'（可选）
   examples: [                       // 示例（推荐）
     { cmd: 'xbrowser site cmd', description: '说明' },
   ],
   handler: async (params, ctx) => { // 处理函数（必须）
     return { ok: true, data: {} };
   },
+});
+```
+
+### loginRequired 取值
+
+声明命令的登录需求，用于 marketplace 展示和用户提示：
+
+| 值 | 含义 | 适用场景 |
+|----|------|----------|
+| `'required'` | 必须登录才能使用 | 发布、私信、订单等需要身份认证的操作 |
+| `'optional'` | 登录后可获得更完整的数据 | 搜索、详情等登录前后都可用的命令 |
+| `'none'` | 无需登录，纯公开数据 | 热搜、排行榜、公开页面采集 |
+
+::: tip 运行时行为
+`loginRequired` 仅用于 **展示提示**（`--help` 输出 `Login:` 行、marketplace UI 显示锁标记）。
+若需 **运行时拦截** 未登录用户，请配合 `requiresLogin: true` 使用。
+:::
+
+```typescript
+// 必须登录的命令
+site.command('publish', {
+  description: '发布内容',
+  scope: 'page',
+  loginRequired: 'required',
+  requiresLogin: true,
+  handler: async (params, ctx) => { /* ... */ },
+});
+
+// 登录可选的命令
+site.command('search', {
+  description: '搜索内容',
+  scope: 'page',
+  loginRequired: 'optional',
+  handler: async (params, ctx) => { /* ... */ },
+});
+
+// 无需登录的命令
+site.command('hot', {
+  description: '获取热搜',
+  scope: 'page',
+  loginRequired: 'none',
+  handler: async (params, ctx) => { /* ... */ },
 });
 ```
 
@@ -442,6 +486,66 @@ const result = await page.evaluate((arg) => {
   return document.querySelectorAll(arg).length;
 }, selector);
 ```
+
+---
+
+## loginRequired 声明
+
+`loginRequired` 是命令级别的登录需求声明，用于告知用户和市场平台该命令是否需要登录。
+
+### 声明方式
+
+在 `site.command()` 中直接指定：
+
+```typescript
+site.command('publish', {
+  description: '发布笔记',
+  scope: 'page',
+  loginRequired: 'required',  // 声明此命令必须登录
+  handler: async (params, ctx) => { /* ... */ },
+});
+```
+
+### 与 requiresLogin 的区别
+
+| 属性 | 类型 | 作用 | 影响范围 |
+|------|------|------|----------|
+| `loginRequired` | `'required' \| 'optional' \| 'none'` | **展示提示**：--help 输出、marketplace UI 锁标记 | 信息层 |
+| `requiresLogin` | `boolean` | **运行时拦截**：未登录时阻止命令执行 | 运行层 |
+
+::: warning 重要
+- `loginRequired: 'required'` **不会** 自动拦截未登录用户，仅展示提示
+- 如需运行时拦截，需额外设置 `requiresLogin: true`
+- `loginRequired: 'optional'` 表示登录可增强数据，但不强制
+:::
+
+### --help 输出
+
+声明 `loginRequired` 后，命令的 `--help` 会自动输出 `Login:` 行：
+
+```bash
+$ xbrowser xiaohongshu publish --help
+
+xiaohongshu publish - 发布笔记
+
+Usage: xbrowser xiaohongshu publish [options]
+
+  Login: required
+```
+
+### Marketplace 集成
+
+Marketplace CLI 在发布插件时会自动提取 `loginRequired`：
+
+1. 调用 `xbrowser <plugin> <command> --help` 获取帮助文本
+2. 解析 `Login:` 行获取值
+3. 存入 `xbrowser-commands.json` 的 `loginRequired` 字段
+4. 前端 UI 根据值显示对应标记（锁/用户/公开图标）
+
+若插件未声明 `loginRequired`，marketplace 会根据命令名自动推断：
+- `login`/`publish`/`post` 等 → `required`
+- `search`/`detail`/`hot` 等 → `optional`
+- `hotsearch`/`rank`/`trending` 等 → `none`
 
 ---
 
