@@ -27,6 +27,7 @@ export default defineConfig({
         { text: '插件元数据', link: '/plugins/plugin-metadata' },
         { text: 'SEO 插件', link: '/plugins/seo-plugins' },
         { text: '外链指南', link: '/plugins/backlinks-guide' },
+        { text: '发布指南', link: '/plugins/publish-guide' },
       ],
       '/api/': [
         { text: 'HTTP API', link: '/api/api' },
