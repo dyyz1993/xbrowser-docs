@@ -3,9 +3,15 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'xbrowser',
   description: 'AI Agent 的浏览器自动化 CLI',
+  lastUpdated: true,
+  cleanUrls: true,
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
+    ['meta', { name: 'theme-color', content: '#172554' }],
   ],
+  sitemap: {
+    hostname: 'https://docs.xbrowser.dev',
+  },
   themeConfig: {
     nav: [
       { text: '指南', link: '/guide/getting-started' },
@@ -31,6 +37,10 @@ export default defineConfig({
       '/api/': [
         { text: 'HTTP API', link: '/api/api' },
       ],
+    },
+    editLink: {
+      pattern: 'https://github.com/dyyz1993/xbrowser-docs/edit/main/:path',
+      text: '在 GitHub 上编辑此页',
     },
     socialLinks: [
       { icon: 'github', link: 'https://github.com/dyyz1993/xbrowser' },
